@@ -7,6 +7,7 @@ date                name           comment
 
 
 """
+import streamlit as st
 
 st.title('Dating App')
 
