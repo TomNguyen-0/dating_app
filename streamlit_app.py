@@ -15,6 +15,7 @@ from snowflake.snowpark import Session
 
 @st.cache_resource
 def create_session():
+    st.write(st.secrets.snowflake) ## for debugging on streamlit cloud
     return Session.builder.configs(st.secrets.snowflake).create()
 
 st.markdown('### Search Company Dataset from Snowflake')
