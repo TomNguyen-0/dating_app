@@ -1,6 +1,9 @@
 
 r"""
-General idea template for dating app
+Purpose:
+    To Search free company dataset from Snowflake
+    To show how to use snowflake with streamlit
+    To show database connection with streamlit
 
 reference:
     [connecting_to_snowflake]: https://www.youtube.com/watch?v=SgWxkAdjK78
