@@ -21,53 +21,69 @@ def create_session():
     # st.write(st.secrets.snowflake) ## for debugging on streamlit cloud
     return Session.builder.configs(st.secrets.snowflake).create()
 
-st.markdown('### Search Company Dataset from Snowflake')
+@st.cache_resource
+def get_info():
+    get_city_df = session.sql(f'SELECT DISTINCT locality FROM {table_name} order by locality')
+    city = [row[0] for row in get_city_df.collect()]
 
+    get_state_df = session.sql(f'SELECT DISTINCT region FROM {table_name} order by region')
+    state = [row[0] for row in get_state_df.collect()]
+
+    get_size_df = session.sql(f'SELECT DISTINCT size FROM {table_name} order by size')
+    size = [row[0] for row in get_size_df.collect()]
+
+    return (city,state,size)
+
+@st.cache_resource
+def get_df():
+    table_name = 'free_company_dataset.public.freecompanydataset'
+    df = session.table(table_name)
+    return df
+
+
+st.markdown('### Search Company Dataset from Snowflake')
 
 
 table_name = 'free_company_dataset.public.freecompanydataset'
 
 session = create_session()
+city,state,size = get_info()
 
-get_city_df = session.sql(f'SELECT DISTINCT locality FROM {table_name}')
-city = [row[0] for row in get_city_df.collect()]
 san_diego_index = city.index('san diego')
-
-get_state_df = session.sql(f'SELECT DISTINCT region FROM {table_name}')
-state = [row[0] for row in get_state_df.collect()]
 california_index = state.index('california')
-
-get_size_df = session.sql(f'SELECT DISTINCT size FROM {table_name}')
-size = [row[0] for row in get_size_df.collect()]
-
 ## search for company name
 company_name = st.text_input(label="Company Name")
 
-city_selected = st.selectbox(label="City",
-             options=city,
-             key="city",
-             index=san_diego_index)
-state_selected = st.selectbox(label="State",
-                options=state,
-                key="state",
-                index=california_index)
+# city_selected = st.selectbox(label="City",
+#              options=city,
+#              key="city",
+#              index=san_diego_index)
+city_selected = st.text_input(label="City", key="city", value="san diego")
+# state_selected = st.selectbox(label="State",
+#                 options=state,
+#                 key="state",
+#                 index=california_index)
+state_selected = st.text_input(label="State", key="state", value="california")
 size_selected = st.selectbox(label="Size",
                 options=size,
                 key="size")
+df_original = get_df()
 if company_name:
-    df = session.sql(f'''
-                    SELECT * 
-                    FROM {table_name}
-                    WHERE name like '%{company_name}%'
-                 ''')
+    df = df_original.filter(f"NAME ilike '%{company_name}%'") 
+        # df = session.sql(f'''
+        #             SELECT * 
+        #             FROM {table_name}
+        #             WHERE name like '%{company_name}%'
+        #          ''')
 else:
-    df = session.sql(f'''
-                        SELECT * 
-                        FROM {table_name}
-                        WHERE locality like '%{city_selected}%'
-                        AND REGION LIKE '%{state_selected}%'
-                        AND SIZE LIKE '%{size_selected}%'
-                    ''')
+    df = df_original.where(f"locality ilike '%{city_selected}%' AND REGION iLIKE '%{state_selected}%' AND SIZE iLIKE '%{size_selected}%'") 
+    # df = session.sql(f'''
+    #                     SELECT * 
+    #                     FROM {table_name}
+    #                     WHERE locality like '%{city_selected}%'
+    #                     AND REGION LIKE '%{state_selected}%'
+    #                     AND SIZE LIKE '%{size_selected}%'
+    #                 ''')
 
 
 # st.write(df)
@@ -86,6 +102,6 @@ for row in df_collect:
         if row.INDUSTRY:
             st.markdown(f"**Industry:** *{row.INDUSTRY}*")
         if row.WEBSITE:
-            st.markdown(f"**Website:** *{row.WEBSITE}*")
+            st.markdown(f"**Website:** *[{row.WEBSITE}](https://www.{row.WEBSITE})*")
         if row.LINKEDIN_URL:
             st.markdown(f"**LinkedIn:** *{row.LINKEDIN_URL}*")
