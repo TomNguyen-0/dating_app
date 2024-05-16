@@ -79,6 +79,7 @@ if company_name:
         #             FROM {table_name}
         #             WHERE name like '%{company_name}%'
         #          ''')
+
 else:
     df = df_original.where(f"locality ilike '%{city_selected}%' AND REGION iLIKE '%{state_selected}%' AND SIZE iLIKE '%{size_selected}%'") 
     # df = session.sql(f'''
@@ -96,8 +97,8 @@ df_collect = df.collect() ## I can move this into get_df and have it collect onl
 if 'index_load' not in st.session_state:
     st.session_state.index_load = 0
 # st.write("index_load", st.session_state.index_load) ## for debugging
+st.markdown("<div id='top'></div>", unsafe_allow_html=True);
 st.write(f"{st.session_state.index_load + 10} out of ", len(df_collect), "companies")
-
 for index,row in enumerate(df_collect,1):
     if index <= st.session_state.index_load:
         continue
@@ -118,6 +119,16 @@ for index,row in enumerate(df_collect,1):
         if row.LINKEDIN_URL:
             st.markdown(f"**LinkedIn:** *{row.LINKEDIN_URL}*")
 
-if st.button("Load next 10 rows"):
-    st.session_state.index_load += 10
-    st.experimental_rerun()
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("Load next 10 rows"):
+        st.session_state.index_load += 10
+        st.experimental_rerun()
+    st.markdown("<a href='#top'>Go to top</a>", unsafe_allow_html=True);
+
+with col2:
+    if st.button("reset index"):  
+        st.session_state.index_load = 0
+        st.experimental_rerun()
+        
+st.write(f"{st.session_state.index_load + 10} out of ", len(df_collect), "companies")
