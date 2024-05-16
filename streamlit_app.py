@@ -10,6 +10,10 @@ reference:
 
 date                name           comment
 05/09/2024          TomN           initial creations
+05/16/2024          TomN           load 10 rows at a time
+
+backlog:
+    download database from snowflake
 
 
 """
@@ -86,13 +90,21 @@ else:
     #                 ''')
 
 
-# st.write(df)
-# st.dataframe(df)
-# df = session.table(table_name)
-# df_collect = df.collect()
-df_collect = df.collect()
-st.write("found", len(df_collect), "companies")
-for row in df_collect:
+
+df_collect = df.collect() ## I can move this into get_df and have it collect only once
+
+if 'index_load' not in st.session_state:
+    st.session_state.index_load = 0
+# st.write("index_load", st.session_state.index_load) ## for debugging
+st.write(f"{st.session_state.index_load + 10} out of ", len(df_collect), "companies")
+
+for index,row in enumerate(df_collect,1):
+    if index <= st.session_state.index_load:
+        continue
+    if (index+st.session_state.index_load) % 10 == 0:
+        break
+        
+            
     with st.container(border=True):
         st.markdown(f"**Company Name:** *{row.NAME}*")
         if row.FOUNDED:
@@ -105,3 +117,7 @@ for row in df_collect:
             st.markdown(f"**Website:** *[{row.WEBSITE}](https://www.{row.WEBSITE})*")
         if row.LINKEDIN_URL:
             st.markdown(f"**LinkedIn:** *{row.LINKEDIN_URL}*")
+
+if st.button("Load next 10 rows"):
+    st.session_state.index_load += 10
+    st.experimental_rerun()
