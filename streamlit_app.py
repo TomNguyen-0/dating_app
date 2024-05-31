@@ -11,9 +11,11 @@ reference:
 date                name           comment
 05/09/2024          TomN           initial creations
 05/16/2024          TomN           load 10 rows at a time
-
+05/18/2024          TomN           download database from snowflake. 
+                                   created file:///load_into_ssms.py
+05/30/2024          TomN           trials expires june 08, 2024
 backlog:
-    download database from snowflake
+
 
 
 """
@@ -46,89 +48,93 @@ def get_df():
 
 
 st.markdown('### Search Company Dataset from Snowflake')
+st.markdown('### Trial expires June 08, 2024')
 
 
 table_name = 'free_company_dataset.public.freecompanydataset'
 
-session = create_session()
-city,state,size = get_info()
+try:
+    session = create_session()
+    city,state,size = get_info()
 
-san_diego_index = city.index('san diego')
-california_index = state.index('california')
-## search for company name
-company_name = st.text_input(label="Company Name")
+    san_diego_index = city.index('san diego')
+    california_index = state.index('california')
+    ## search for company name
+    company_name = st.text_input(label="Company Name")
 
-# city_selected = st.selectbox(label="City",
-#              options=city,
-#              key="city",
-#              index=san_diego_index)
-city_selected = st.text_input(label="City", key="city", value="san diego")
-# state_selected = st.selectbox(label="State",
-#                 options=state,
-#                 key="state",
-#                 index=california_index)
-state_selected = st.text_input(label="State", key="state", value="california")
-size_selected = st.selectbox(label="Size",
-                options=size,
-                key="size")
-df_original = get_df()
-if company_name:
-    df = df_original.filter(f"NAME ilike '%{company_name}%'") 
+    # city_selected = st.selectbox(label="City",
+    #              options=city,
+    #              key="city",
+    #              index=san_diego_index)
+    city_selected = st.text_input(label="City", key="city", value="san diego")
+    # state_selected = st.selectbox(label="State",
+    #                 options=state,
+    #                 key="state",
+    #                 index=california_index)
+    state_selected = st.text_input(label="State", key="state", value="california")
+    size_selected = st.selectbox(label="Size",
+                    options=size,
+                    key="size")
+    df_original = get_df()
+    if company_name:
+        df = df_original.filter(f"NAME ilike '%{company_name}%'") 
+            # df = session.sql(f'''
+            #             SELECT * 
+            #             FROM {table_name}
+            #             WHERE name like '%{company_name}%'
+            #          ''')
+
+    else:
+        df = df_original.where(f"locality ilike '%{city_selected}%' AND REGION iLIKE '%{state_selected}%' AND SIZE iLIKE '%{size_selected}%'") 
         # df = session.sql(f'''
-        #             SELECT * 
-        #             FROM {table_name}
-        #             WHERE name like '%{company_name}%'
-        #          ''')
-
-else:
-    df = df_original.where(f"locality ilike '%{city_selected}%' AND REGION iLIKE '%{state_selected}%' AND SIZE iLIKE '%{size_selected}%'") 
-    # df = session.sql(f'''
-    #                     SELECT * 
-    #                     FROM {table_name}
-    #                     WHERE locality like '%{city_selected}%'
-    #                     AND REGION LIKE '%{state_selected}%'
-    #                     AND SIZE LIKE '%{size_selected}%'
-    #                 ''')
+        #                     SELECT * 
+        #                     FROM {table_name}
+        #                     WHERE locality like '%{city_selected}%'
+        #                     AND REGION LIKE '%{state_selected}%'
+        #                     AND SIZE LIKE '%{size_selected}%'
+        #                 ''')
 
 
 
-df_collect = df.collect() ## I can move this into get_df and have it collect only once
+    df_collect = df.collect() ## I can move this into get_df and have it collect only once
 
-if 'index_load' not in st.session_state:
-    st.session_state.index_load = 0
-# st.write("index_load", st.session_state.index_load) ## for debugging
-st.markdown("<div id='top'></div>", unsafe_allow_html=True);
-st.write(f"{st.session_state.index_load + 10} out of ", len(df_collect), "companies")
-for index,row in enumerate(df_collect,1):
-    if index <= st.session_state.index_load:
-        continue
-    if (index+st.session_state.index_load) % 10 == 0:
-        break
-        
-            
-    with st.container(border=True):
-        st.markdown(f"**Company Name:** *{row.NAME}*")
-        if row.FOUNDED:
-            st.markdown(f"**Founded:** *{row.FOUNDED}*")
-        else:
-            st.markdown(f"**Founded:** *N/A*")
-        if row.INDUSTRY:
-            st.markdown(f"**Industry:** *{row.INDUSTRY}*")
-        if row.WEBSITE:
-            st.markdown(f"**Website:** *[{row.WEBSITE}](https://www.{row.WEBSITE})*")
-        if row.LINKEDIN_URL:
-            st.markdown(f"**LinkedIn:** *{row.LINKEDIN_URL}*")
-
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("Load next 10 rows"):
-        st.session_state.index_load += 10
-        st.experimental_rerun()
-    st.markdown("<a href='#top'>Go to top</a>", unsafe_allow_html=True);
-
-with col2:
-    if st.button("reset index"):  
+    if 'index_load' not in st.session_state:
         st.session_state.index_load = 0
-        st.experimental_rerun()
-        
-st.write(f"{st.session_state.index_load + 10} out of ", len(df_collect), "companies")
+    # st.write("index_load", st.session_state.index_load) ## for debugging
+    st.markdown("<div id='top'></div>", unsafe_allow_html=True);
+    st.write(f"{st.session_state.index_load + 10} out of ", len(df_collect), "companies")
+    for index,row in enumerate(df_collect,1):
+        if index <= st.session_state.index_load:
+            continue
+        if (index+st.session_state.index_load) % 10 == 0:
+            break
+            
+                
+        with st.container(border=True):
+            st.markdown(f"**Company Name:** *{row.NAME}*")
+            if row.FOUNDED:
+                st.markdown(f"**Founded:** *{row.FOUNDED}*")
+            else:
+                st.markdown(f"**Founded:** *N/A*")
+            if row.INDUSTRY:
+                st.markdown(f"**Industry:** *{row.INDUSTRY}*")
+            if row.WEBSITE:
+                st.markdown(f"**Website:** *[{row.WEBSITE}](https://www.{row.WEBSITE})*")
+            if row.LINKEDIN_URL:
+                st.markdown(f"**LinkedIn:** *{row.LINKEDIN_URL}*")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Load next 10 rows"):
+            st.session_state.index_load += 10
+            st.experimental_rerun()
+        st.markdown("<a href='#top'>Go to top</a>", unsafe_allow_html=True);
+
+    with col2:
+        if st.button("reset index"):  
+            st.session_state.index_load = 0
+            st.experimental_rerun()
+
+    st.write(f"{st.session_state.index_load + 10} out of ", len(df_collect), "companies")
+except Exception as e:
+    st.write('Snowflake trial is expired.')
